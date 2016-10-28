@@ -12,8 +12,8 @@ class AlterUserTable extends Migration {
 	 */
 	public function up() {
 		Schema::table( 'users', function ( Blueprint $table ) {
-			$table->boolean( "is_admin" )->after( "remember_token" );
-			$table->boolean( "verified" )->after( "remember_token" );
+			$table->boolean( "is_admin" )->default(false)->after( "remember_token" );
+			$table->boolean( "verified" )->default(false)->after( "remember_token" );
 			$table->string( "token" )->after( "verified" )->nullable();
 			$table->string( "tempMail" )->after( "email" )->nullable();
 		} );
