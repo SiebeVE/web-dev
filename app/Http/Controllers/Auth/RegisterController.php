@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers\Auth;
 
+use App\Notifications\EmailConfirm;
 use App\User;
 use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Foundation\Auth\RegistersUsers;
 
@@ -68,4 +70,54 @@ class RegisterController extends Controller
             'password' => bcrypt($data['password']),
         ]);
     }
+
+	/**
+	 * Handle a registration request for the application.
+	 *
+	 * @param Request $request
+	 * @param AppMailer $mailer
+	 *
+	 * @return \Illuminate\Http\RedirectResponse
+	 * @throws \Illuminate\Foundation\Validation\ValidationException
+	 */
+	public function register(Request $request)
+	{
+		$validator = $this->validator($request->all());
+
+		if ($validator->fails())
+		{
+			$this->throwValidationException(
+				$request, $validator
+			);
+		}
+
+		//Auth::login($this->create($request->all()));
+		$user = $this->create($request->all());
+
+		$user->notify(new EmailConfirm($user));
+
+		flashToastr("info", "Check Email", "Check your mailbox for the confirmation email.");
+
+
+		//return view('auth.register');
+		return redirect("login");
+		//return redirect($this->redirectPath());
+	}
+
+	/**
+	 * Send confirmation mail registration
+	 *
+	 * @param $token
+	 *
+	 * @return \Illuminate\Http\RedirectResponse|\Illuminate\Routing\Redirector
+	 */
+	public function confirmEmail($token)
+	{
+		$user = User::where('token_mail', $token)->firstOrFail()->confirmEmail();
+
+		flashToastr("success", "Email confirmed", "Your email is confirmed, you can now login.");
+
+		return redirect("login");
+	}
+
 }

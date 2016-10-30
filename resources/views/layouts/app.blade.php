@@ -11,6 +11,9 @@
     <title>{{ config('app.name', 'Laravel') }}</title>
 
     <!-- Styles -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.4.0/css/font-awesome.min.css" rel='stylesheet'
+          type='text/css'>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/css/toastr.min.css" rel="stylesheet">
     <link href="/css/app.css" rel="stylesheet">
 
     <!-- Scripts -->
@@ -79,9 +82,19 @@
         </nav>
 
         @yield('content')
+    
+        @if (session()->has('messageToastr'))
+            <div class="hidden" id="messageToastr" data-style="{{ session('messageToastr')["style"] }}">
+                <span class="title">{{ session('messageToastr')["title"] }}</span>
+                <span class="content">{!! session('messageToastr')["content"] !!}</span>
+            </div>
+        @endif
     </div>
 
     <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
     <script src="/js/app.js"></script>
 </body>
 </html>
