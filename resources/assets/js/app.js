@@ -1,4 +1,5 @@
 jQuery.noConflict();
+// Function so the toastr messages are getting flashed
 (function ( $ ) {
 	toastr.options = {
 		"closeButton": true,
@@ -19,14 +20,17 @@ jQuery.noConflict();
 	};
 	
 	$(function () {
+		// Find the dom
 		var $messageToastr = $("#messageToastr");
+		// Check if their is a message
 		if ($messageToastr.length > 0) {
+			// Search for the settings
 			var style = $messageToastr.data("style");
 			var title = $messageToastr.find("span.title");
 			var content = $messageToastr.find("span.content");
 			
+			// Show that toastr
 			toastr[ style ](content, title);
-			// $messageToastr.remove();
 		}
 	});
 	

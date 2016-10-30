@@ -15,19 +15,36 @@
  */
 function flashToastr($style, $title, $content)
 {
-	$newContent = $content;
+	$stringyContent = $content;
 	if (is_array($content))
 	{
-		$newContent = "";
+		// If the content is an array, convert it to a string
+		$stringyContent = "";
 		foreach ($content as $contentMessage)
 		{
-			$newContent .= "<p>" . $contentMessage . "</p>";
+			// Add some paragraphs for nice reading
+			$stringyContent .= "<p>" . $contentMessage . "</p>";
 		}
 	}
+	// Set the settings
 	$message = [
 		"style"   => $style,
 		"title"   => $title,
-		"content" => $newContent
+		"content" => $stringyContent
 	];
+	// Put it in the session for blade to pick it up
 	session()->flash('messageToastr', $message);
+}
+
+/**
+ * Decode the hash for the id
+ *
+ * @param $hash
+ *
+ * @return array
+ */
+function decodeHash($hash)
+{
+	$decodeHash = new \Hashids\Hashids(env("HASH_SECRET", "MySecretKey"), 15);
+	return $decodeHash->decode($hash);
 }

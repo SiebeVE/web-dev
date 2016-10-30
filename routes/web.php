@@ -18,4 +18,12 @@ Route::get('/', function () {
 Auth::routes();
 
 Route::get('/home', 'HomeController@index');
-Route::get('register/confirm/{token}', 'Auth\RegisterController@confirmEmail');
+Route::get('/register/confirm/{token}', 'Auth\RegisterController@confirmEmail');
+
+Route::get('/battle/{battle}', "BattleController@getBattle");
+Route::get('/battle/{battle}/{pick}', "BattleController@postBattle");
+
+Route::bind('battle', function($value, $route){
+	// Id is hashed, so users can't guess the ids of other games, so now we need to decode it
+	return \App\Battle::where('id', decodeHash($value)[0])->firstOrFail();
+});

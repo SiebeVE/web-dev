@@ -48,6 +48,7 @@ class User extends Authenticatable {
 		//Executed when a new user is made
 		static::creating(function ($user)
 		{
+			// Set the token for an email
 			$user->token_mail = str_random(30);
 		});
 	}

@@ -10,7 +10,8 @@
         "barryvdh/laravel-debugbar": "^2.3",
         "maatwebsite/excel": "^2.1",
         "tymon/jwt-auth": "^0.5.9",
-        "doctrine/dbal": "^2.5"
+        "doctrine/dbal": "^2.5",
+        "hashids/hashids": "^1.0"
     },
     "require-dev": {
         "fzaninotto/faker": "~1.4",
