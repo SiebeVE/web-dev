@@ -5,6 +5,7 @@ namespace App;
 use Hashids\Hashids;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Auth;
 
 class Battle extends Model {
 	use SoftDeletes;
@@ -27,11 +28,10 @@ class Battle extends Model {
 	 *
 	 * @return Hashids|string
 	 */
-	public function getIdAttribute($id)
-	{
+	public function getIdAttribute( $id ) {
 		// When we fetch the id, we want it hashed, so the user can't guess the next game and fuck my game
-		$hashedId = new Hashids(env("HASH_SECRET", "MySecretKey"), 15);
-		$hashedId = $hashedId->encode($id);
+		$hashedId = new Hashids( env( "HASH_SECRET", "MySecretKey" ), 15 );
+		$hashedId = $hashedId->encode( $id );
 
 		return $hashedId;
 	}
@@ -41,8 +41,8 @@ class Battle extends Model {
 	 *
 	 * @return array
 	 */
-	public function decodedId(){
-		return decodeHash($this->id)[0];
+	public function decodedId() {
+		return decodeHash( $this->id )[0];
 	}
 
 	/**
@@ -51,7 +51,10 @@ class Battle extends Model {
 	 * @return \Illuminate\Database\Eloquent\Relations\HasMany
 	 */
 	public function picks() {
-		return $this->hasMany( 'App\Pick' );
+		// Cant use relations because of hashed battle id
+		$picks = Pick::where( 'battle_id', $this->decodedId() )->get();
+
+		return $picks;
 	}
 
 	/**
@@ -60,7 +63,37 @@ class Battle extends Model {
 	 * @return \Illuminate\Database\Eloquent\Relations\HasMany
 	 */
 	public function cur_users() {
-		return $this->hasMany( 'App\User' );
+		// Cant use relations because of hashed battle id
+		$users = User::where( 'battle_id', $this->decodedId() )->get();
+
+		return $users;
+	}
+
+	public function getOpponents() {
+		$currentUser = Auth::user();
+		$opponents   = [];
+
+		$users = $this->cur_users();
+		$picks = $this->picks();
+
+		foreach ( $users as $user ) {
+			if ( $user->id != $currentUser->id)
+			{
+				$opponents[] = $user;
+			}
+		}
+
+		foreach ($picks as $pick)
+		{
+			if ( $pick->user_id != $currentUser->id)
+			{
+				$opponents[] = $pick->user;
+			}
+		}
+
+		//dump($opponents);
+
+		return $opponents;
 	}
 
 	/**
@@ -77,8 +110,8 @@ class Battle extends Model {
 	 *
 	 * @return \Illuminate\Database\Eloquent\Relations\HasOne
 	 */
-	public function with_retake(){
-		return $this->hasOne('\App\Battle', 'is_retake_of', 'id');
+	public function with_retake() {
+		return $this->hasOne( '\App\Battle', 'is_retake_of', 'id' );
 	}
 
 	/**
@@ -86,7 +119,7 @@ class Battle extends Model {
 	 *
 	 * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
 	 */
-	public function retake_of(){
-		return $this->belongsTo('\App\Battle', 'id', 'is_retake_of');
+	public function retake_of() {
+		return $this->belongsTo( '\App\Battle', 'id', 'is_retake_of' );
 	}
 }

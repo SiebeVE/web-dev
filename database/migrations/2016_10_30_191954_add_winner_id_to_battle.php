@@ -31,6 +31,7 @@ class AddWinnerIdToBattle extends Migration
     public function down()
     {
         Schema::table('battles', function (Blueprint $table) {
+	        $table->dropForeign(["winner_id"]);
             $table->dropColumn("winner_id");
         });
     }

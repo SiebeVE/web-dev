@@ -70,7 +70,7 @@ class User extends Authenticatable {
 	 */
 	public function cur_battle()
 	{
-		return $this->belongsTo('App\Battle');
+		return $this->belongsTo('App\Battle', 'battle_id');
 	}
 
 	/**

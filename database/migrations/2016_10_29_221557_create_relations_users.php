@@ -17,7 +17,7 @@ class CreateRelationsUsers extends Migration
 	        $table->foreign('battle_id')
 	              ->references('id')
 	              ->on('battles')
-	              ->onDelete('cascade')
+	              ->onDelete('restrict')
 	              ->onUpdate('cascade');
         });
     }

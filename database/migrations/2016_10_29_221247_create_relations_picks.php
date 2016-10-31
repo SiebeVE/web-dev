@@ -17,7 +17,7 @@ class CreateRelationsPicks extends Migration
 	        $table->foreign('user_id')
 	              ->references('id')
 		          ->on('users')
-	              ->onDelete('cascade')
+	              ->onDelete('restrict')
 	              ->onUpdate('cascade');
 
 	        $table->foreign('battle_id')
@@ -36,10 +36,8 @@ class CreateRelationsPicks extends Migration
     public function down()
     {
         Schema::table('picks', function (Blueprint $table) {
-	        $table->dropForeign([
-	        	'user_id',
-	        	'battle_id'
-	        ]);
+	        $table->dropForeign(['user_id']);
+	        $table->dropForeign(['battle_id']);
         });
     }
 }

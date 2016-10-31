@@ -31,6 +31,7 @@ class AddIsRetakeOfToBattle extends Migration
     public function down()
     {
         Schema::table('battles', function (Blueprint $table) {
+	        $table->dropForeign(["is_retake_of"]);
             $table->dropColumn("is_retake_of");
         });
     }
