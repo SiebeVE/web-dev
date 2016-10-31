@@ -77,7 +77,6 @@ class BattleController extends Controller
 				}
 				$winner_array[ $pick->pick ][] = $pick->user_id;
 			}
-			dump($winner_array);
 			// Check if their could be a winner
 			switch (count($winner_array)) {
 				// Everyone picked the same, reset the battle
@@ -88,13 +87,9 @@ class BattleController extends Controller
 				case 2:
 					// Check who has won
 					$winner_keys = array_keys($winner_array);
-					//dump($winner_keys);
 
 					$win_key = $winner_keys[1];
 					$lose_key = $winner_keys[0];
-
-					//dump($pickWins[ $winner_keys[0] ]);
-					//dump($pickWins[ $winner_keys[1] ]);
 
 					if ($pickWins[ $winner_keys[0] ] == $winner_keys[1]) {
 						// Key 0 has won
@@ -102,13 +97,10 @@ class BattleController extends Controller
 						$lose_key = $winner_keys[1];
 					}
 
-					//dump($win_key);
-					//dump($lose_key);
-
 					if (count($winner_array[ $win_key ]) > 1) {
 						// More then one winner, play again with remaining players
 						$this->resetBattle($battle, $picks, $battle_id);
-						//dump($winner_array[ $lose_key ]);
+
 						// Now set the losing player battle_id to null
 						foreach ($winner_array[ $lose_key ] as $loserId) {
 							$user = User::where('id', $loserId)->firstOrFail();
@@ -121,17 +113,14 @@ class BattleController extends Controller
 						//dump($winner_array[ $win_key ][0]);
 						$winner_id = $winner_array[ $win_key ][0];
 					}
-
 					break;
-				// Every one picked the same, reset the battle
+				// All the possibilities where picked, reset the battle
 				case 3:
 					$this->resetBattle($battle, $picks, $battle_id);
 					break;
 			}
 			$battle->winner_id = $winner_id;
 			$battle->save();
-
-			dd("ok");
 		}
 		flashToastr("success", "U heeft " . $pick . " gespeeld.", "Hoera, je hebt gespeeld, binnenkort krijg je de uitslag!");
 
