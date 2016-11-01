@@ -31,6 +31,7 @@ class Battle extends Model
 		"start_date",
 		"end_date",
 		"round",
+		"competition_id"
 	];
 
 	/**
@@ -60,7 +61,7 @@ class Battle extends Model
 	/**
 	 * Get the picks of a battle
 	 *
-	 * @return \Illuminate\Database\Eloquent\Relations\HasMany
+	 * @return mixed
 	 */
 	public function picks () {
 		// Cant use relations because of hashed battle id
@@ -72,7 +73,7 @@ class Battle extends Model
 	/**
 	 * Get the current users of this battle
 	 *
-	 * @return \Illuminate\Database\Eloquent\Relations\HasMany
+	 * @return mixed
 	 */
 	public function cur_users () {
 		// Cant use relations because of hashed battle id
@@ -81,6 +82,11 @@ class Battle extends Model
 		return $users;
 	}
 
+	/**
+	 * Get the opponents (not the user it self) of this battle, including all ready played
+	 *
+	 * @return array
+	 */
 	public function getOpponents () {
 		$currentUser = Auth::user();
 		$opponents = [];
@@ -99,8 +105,6 @@ class Battle extends Model
 				$opponents[] = $pick->user;
 			}
 		}
-
-		//dump($opponents);
 
 		return $opponents;
 	}
@@ -130,5 +134,17 @@ class Battle extends Model
 	 */
 	public function retake_of () {
 		return $this->belongsTo('\App\Battle', 'id', 'is_retake_of');
+	}
+
+	/**
+	 * Get the competition of this battle
+	 *
+	 * @return mixed
+	 */
+	public function competition () {
+		// Cant use relations because of hashed battle id
+		$competition = Competition::where('id', $this->decodedId())->get();
+
+		return $competition;
 	}
 }

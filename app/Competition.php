@@ -46,4 +46,13 @@ class Competition extends Model
 	public function winner () {
 		return $this->belongsTo('\App\User');
 	}
+
+	/**
+	 * Get all battles of this competition
+	 *
+	 * @return \Illuminate\Database\Eloquent\Relations\HasMany
+	 */
+	public function battle () {
+		return $this->hasMany('\App\Battle');
+	}
 }
