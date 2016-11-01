@@ -20,6 +20,15 @@ Auth::routes();
 Route::get('/home', 'HomeController@index');
 Route::get('/register/confirm/{token}', 'Auth\RegisterController@confirmEmail');
 
+Route::get('/battle/start', function(){
+	\Illuminate\Support\Facades\Artisan::call('migrate:refresh', [ '--seed' => true,]);
+	$battle = new \App\BattleLogic\BattleLogic();
+	$battle->start_competition();
+	$battle->start_battle();
+	dump(true);
+	debug("");
+});
+
 Route::get('/battle/{battle}', "BattleController@getBattle");
 Route::get('/battle/{battle}/{pick}', "BattleController@postBattle");
 

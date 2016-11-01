@@ -7,7 +7,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
 
-class Battle extends Model {
+class Battle extends Model
+{
 	use SoftDeletes;
 
 	/**
@@ -22,16 +23,27 @@ class Battle extends Model {
 	];
 
 	/**
+	 * The attributes that are mass assignable
+	 *
+	 * @var array
+	 */
+	protected $fillable = [
+		"start_date",
+		"end_date",
+		"round",
+	];
+
+	/**
 	 * Get the id as a hashed string
 	 *
 	 * @param $id
 	 *
 	 * @return Hashids|string
 	 */
-	public function getIdAttribute( $id ) {
+	public function getIdAttribute ($id) {
 		// When we fetch the id, we want it hashed, so the user can't guess the next game and fuck my game
-		$hashedId = new Hashids( env( "HASH_SECRET", "MySecretKey" ), 15 );
-		$hashedId = $hashedId->encode( $id );
+		$hashedId = new Hashids(env("HASH_SECRET", "MySecretKey"), 15);
+		$hashedId = $hashedId->encode($id);
 
 		return $hashedId;
 	}
@@ -41,8 +53,8 @@ class Battle extends Model {
 	 *
 	 * @return array
 	 */
-	public function decodedId() {
-		return decodeHash( $this->id )[0];
+	public function decodedId () {
+		return decodeHash($this->id)[0];
 	}
 
 	/**
@@ -50,9 +62,9 @@ class Battle extends Model {
 	 *
 	 * @return \Illuminate\Database\Eloquent\Relations\HasMany
 	 */
-	public function picks() {
+	public function picks () {
 		// Cant use relations because of hashed battle id
-		$picks = Pick::where( 'battle_id', $this->decodedId() )->get();
+		$picks = Pick::where('battle_id', $this->decodedId())->get();
 
 		return $picks;
 	}
@@ -62,31 +74,28 @@ class Battle extends Model {
 	 *
 	 * @return \Illuminate\Database\Eloquent\Relations\HasMany
 	 */
-	public function cur_users() {
+	public function cur_users () {
 		// Cant use relations because of hashed battle id
-		$users = User::where( 'battle_id', $this->decodedId() )->get();
+		$users = User::where('battle_id', $this->decodedId())->get();
 
 		return $users;
 	}
 
-	public function getOpponents() {
+	public function getOpponents () {
 		$currentUser = Auth::user();
-		$opponents   = [];
+		$opponents = [];
 
 		$users = $this->cur_users();
 		$picks = $this->picks();
 
-		foreach ( $users as $user ) {
-			if ( $user->id != $currentUser->id)
-			{
+		foreach ($users as $user) {
+			if ($user->id != $currentUser->id) {
 				$opponents[] = $user;
 			}
 		}
 
-		foreach ($picks as $pick)
-		{
-			if ( $pick->user_id != $currentUser->id)
-			{
+		foreach ($picks as $pick) {
+			if ($pick->user_id != $currentUser->id) {
 				$opponents[] = $pick->user;
 			}
 		}
@@ -101,8 +110,8 @@ class Battle extends Model {
 	 *
 	 * @return \Illuminate\Database\Eloquent\Relations\BelongsToMany
 	 */
-	public function users() {
-		return $this->belongsToMany( 'App\User', 'picks' );
+	public function users () {
+		return $this->belongsToMany('App\User', 'picks');
 	}
 
 	/**
@@ -110,8 +119,8 @@ class Battle extends Model {
 	 *
 	 * @return \Illuminate\Database\Eloquent\Relations\HasOne
 	 */
-	public function with_retake() {
-		return $this->hasOne( '\App\Battle', 'is_retake_of', 'id' );
+	public function with_retake () {
+		return $this->hasOne('\App\Battle', 'is_retake_of', 'id');
 	}
 
 	/**
@@ -119,7 +128,7 @@ class Battle extends Model {
 	 *
 	 * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
 	 */
-	public function retake_of() {
-		return $this->belongsTo( '\App\Battle', 'id', 'is_retake_of' );
+	public function retake_of () {
+		return $this->belongsTo('\App\Battle', 'id', 'is_retake_of');
 	}
 }

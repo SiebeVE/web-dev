@@ -14,43 +14,37 @@ class UsersTableSeeder extends Seeder
 			'name'      => "Siebe1",
 			'email'     => "siebe@game1.com",
 			'password'  => bcrypt('wachtwoord'),
-			'verified'  => true,
-			"battle_id" => 1
+			'verified'  => true
 		]);
 		DB::table('users')->insert([
 			'name'      => "Sam1",
 			'email'     => "sam@game1.com",
 			'password'  => bcrypt('wachtwoord'),
-			'verified'  => true,
-			"battle_id" => 1
+			'verified'  => true
 		]);
 		DB::table('users')->insert([
 			'name'      => "Siebe2",
 			'email'     => "siebe@game2.com",
 			'password'  => bcrypt('wachtwoord'),
-			'verified'  => true,
-			"battle_id" => 1
+			'verified'  => true
 		]);
 		DB::table('users')->insert([
 			'name'      => "Sam2",
 			'email'     => "sam@game2.com",
 			'password'  => bcrypt('wachtwoord'),
-			'verified'  => true,
-			"battle_id" => 1
+			'verified'  => true
 		]);
 		DB::table('users')->insert([
 			'name'      => "Siebe3",
 			'email'     => "siebe@game3.com",
 			'password'  => bcrypt('wachtwoord'),
-			'verified'  => true,
-			"battle_id" => 1
+			'verified'  => true
 		]);
 		DB::table('users')->insert([
 			'name'      => "Sam3",
 			'email'     => "sam@game3.com",
 			'password'  => bcrypt('wachtwoord'),
-			'verified'  => true,
-			"battle_id" => 1
+			'verified'  => true
 		]);
 	}
 }

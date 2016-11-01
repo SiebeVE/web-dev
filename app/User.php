@@ -83,6 +83,33 @@ class User extends Authenticatable {
 	}
 
 	/**
+	 * Get the ranks of this user
+	 *
+	 * @return \Illuminate\Database\Eloquent\Relations\HasMany
+	 */
+	public function ranks () {
+		return $this->hasMany('\App\Rank');
+	}
+
+	/**
+	 * Get the competitions that the user has won
+	 * 
+	 * @return \Illuminate\Database\Eloquent\Relations\HasMany
+	 */
+	public function wins () {
+		return $this->hasMany('\App\Competition');
+	}
+
+	/**
+	 * Get the current playing competitions
+	 *
+	 * @return \Illuminate\Database\Eloquent\Relations\HasMany
+	 */
+	public function playingUsers () {
+		return $this->hasMany('\App\PlayingUser');
+	}
+
+	/**
 	 * Handle database when the email is confirmed
 	 */
 	public function confirmEmail()
