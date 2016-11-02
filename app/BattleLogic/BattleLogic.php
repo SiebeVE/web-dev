@@ -60,6 +60,7 @@ class BattleLogic
 	 * @param $competitionId
 	 */
 	public function play_battle_debug ($failChance, $competitionId) {
+		ini_set('max_execution_time', 3000);
 		// Get all playing users
 		$playingUsers = PlayingUser::where('competition_id', $competitionId)->get();
 
@@ -152,8 +153,20 @@ class BattleLogic
 		return $newCompetition;
 	}
 
-	public function end_competition () {
+	/**
+	 * Function to set the final things in the database after a competition has been finished
+	 *
+	 * @param Competition $competition
+	 * @param PlayingUser $winningUser
+	 */
+	public function end_competition (Competition $competition, PlayingUser $winningUser) {
+		// Set the competitions winner id
+		$competition->winner_id = $winningUser->user_id;
+		$competition->save();
 
+		// Remove the user from the Playing users database
+		$winningUser->delete();
+		debug("The competition was finished, player ".$winningUser->user->name." (".$winningUser->user_id.") has won.");
 	}
 
 	/**
@@ -262,10 +275,9 @@ class BattleLogic
 	public function endRound (Competition $competition) {
 		// Fetch last round of competition
 		$battleComp = $competition->battle()->orderBy('round', 'DESC')->get();
-		$winner_ids = array_pluck($battleComp->toArray(), 'winner_id');
-		//dump($winner_ids);
 		$lastBattle = $battleComp->first();
 		$round = $lastBattle->round;
+		$winner_ids = array_pluck($battleComp->where('round', $round)->toArray(), 'winner_id');
 		debug("Last round is " . $round);
 		// Disqualify all users which haven't played
 		$stillPlayingUsers = $competition->playing_users;
@@ -285,10 +297,10 @@ class BattleLogic
 			}
 		}
 
-		if(count($battleComp) == 1)
+		if(count($stillPlayingUsers) == 1)
 		{
 			// The final battle has been played
-			$this->end_competition();
+			$this->end_competition($competition, $stillPlayingUsers->first());
 		}
 		else
 		{

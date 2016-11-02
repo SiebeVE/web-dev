@@ -32,7 +32,7 @@ Route::get('/battle/start', function () {
 });
 Route::get('/battle/picking', function () {
 	$battle = new BattleLogic();
-	$battle->play_battle_debug(0.02, 1);
+	$battle->play_battle_debug(0.005, 1);
 	dump(true);
 	debug("");
 });

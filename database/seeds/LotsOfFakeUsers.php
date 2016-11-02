@@ -11,6 +11,6 @@ class LotsOfFakeUsers extends Seeder
      */
     public function run()
     {
-	    factory(App\User::class, random_int(125, 214))->create();
+	    factory(App\User::class, random_int(1024, 1400))->create();
     }
 }
