@@ -85,10 +85,12 @@ class Battle extends Model
 	/**
 	 * Get the opponents (not the user it self) of this battle, including all ready played
 	 *
+	 * @param null $user
+	 *
 	 * @return array
 	 */
-	public function getOpponents () {
-		$currentUser = Auth::user();
+	public function getOpponents ($user = NULL) {
+		$currentUser = $user == null ? Auth::user() : $user;
 		$opponents = [];
 
 		$users = $this->cur_users();
