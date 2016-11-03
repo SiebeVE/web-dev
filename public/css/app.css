@@ -5766,4 +5766,14 @@ button.close {
   .hidden-print {
     display: none !important; } }
 
+.prev-battle {
+  white-space: nowrap;
+  overflow-x: scroll; }
+
+.round {
+  display: inline-block; }
+
+.pick > .won {
+  color: green; }
+
 /*# sourceMappingURL=app.css.map */

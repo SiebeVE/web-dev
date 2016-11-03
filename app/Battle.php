@@ -123,19 +123,23 @@ class Battle extends Model
 	/**
 	 * Get the possible retake of this battle
 	 *
-	 * @return \Illuminate\Database\Eloquent\Relations\HasOne
+	 * @return \App\Battle
 	 */
 	public function with_retake () {
-		return $this->hasOne('\App\Battle', 'is_retake_of', 'id');
+		// Cant use relations because of hashed battle id
+		$battle = Battle::where('is_retake_of', $this->decodedId())->get();
+		return $battle;
 	}
 
 	/**
 	 * Get the battle which has been retaken
 	 *
-	 * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
+	 * @return \App\Battle
 	 */
-	public function retake_of () {
-		return $this->belongsTo('\App\Battle', 'id', 'is_retake_of');
+	public function get_retake_of () {
+		// Cant use relations because of hashed battle id
+		$battle = Battle::where('id', $this->is_retake_of)->get();
+		return $battle;
 	}
 
 	/**

@@ -66,6 +66,7 @@ class BattleLogic
 	 */
 	public function play_battle_debug ($failChance, $competitionId) {
 		ini_set('max_execution_time', 3000);
+		ini_set('memory_limit','-1');
 		// Get all playing users
 		$playingUsers = PlayingUser::where('competition_id', $competitionId)->get();
 
@@ -259,12 +260,10 @@ class BattleLogic
 	 *
 	 * @param User $userDEBUG
 	 *
-	 * @param int $delayTime
-	 *
 	 * @return mixed
 	 * @internal param $battle_id
 	 */
-	public function play_battle (Battle $battle, $pick, User $userDEBUG = NULL, $delayTime = 0) {
+	public function play_battle (Battle $battle, $pick, User $userDEBUG = NULL) {
 		// Fetch the users current ip address
 		$ipAddress = request()->ip();
 		// Check if the pick is leggit
@@ -288,7 +287,7 @@ class BattleLogic
 		$user->battle_id = NULL;
 		$user->save();
 
-		$validate_battle = $this->validate_battle($battle, $battle_id, $user, $delayTime);
+		$validate_battle = $this->validate_battle($battle, $battle_id, $user);
 
 		return $validate_battle;
 	}
@@ -319,7 +318,7 @@ class BattleLogic
 				$stillPlayingUser->user->save();
 				$stillPlayingUser->delete();
 				debug("Now check the battle (" . $battle_id . ")");
-				$this->validate_battle(Battle::where('id', $battle_id)->firstOrFail(), $battle_id, $stillPlayingUser->user->id);
+				$this->validate_battle(Battle::where('id', $battle_id)->firstOrFail(), $battle_id, $stillPlayingUser->user);
 			}
 		}
 
@@ -332,6 +331,59 @@ class BattleLogic
 			$this->round = $round + 1;
 			$this->start_battle($competition);
 		}
+	}
+
+	public function getBattleOutcome(Battle $battle)
+	{
+		debug("Start with battle outcome");
+		// We need to get the first battle of the possible retake
+		$firstBattle = $battle;
+		$battles = [0=>$battle];
+		debug($firstBattle);
+		debug("Battle ".$firstBattle->decodedId()." has retake: ".count($firstBattle->get_retake_of()));
+		$notFirstBattle = count($firstBattle->get_retake_of()) > 0;
+		while($notFirstBattle)
+		{
+			$firstBattle = $firstBattle->get_retake_of()->first();
+			$battles[] = $firstBattle;
+			$notFirstBattle = count($firstBattle->get_retake_of()) > 0;
+		}
+
+		$ranking = [];
+		// Now build the rank from battle one
+		for($battleCount = count($battles)-1; $battleCount >= 0; $battleCount--)
+		{
+			// Get picks of battle
+			$picks = $battles[$battleCount]->picks();
+			$battleRanking = [];
+			foreach ($picks as $pick)
+			{
+				$battleRanking[] = ["user"=>$pick->user->toArray(), "pick" => $pick->toArray(), "win" => false];
+			}
+			$ranking[] = $battleRanking;
+		}
+
+		return $ranking;
+	}
+
+	public function getUserOutcome (User $user = NULL) {
+		if($user == null)
+		{
+			$user = Auth::user();
+		}
+		$battles = $user->battles;
+
+		$ranking = [];
+		foreach ($battles as $battle)
+		{
+			debug("Checking battle ".$battle->decodedId());
+			if($battle->winner_id != NULL) {
+				debug("The battle has a winner, so is the last one");
+				$ranking[] = $this->getBattleOutcome($battle);
+			}
+		}
+
+		return $ranking;
 	}
 
 	/**
@@ -349,14 +401,12 @@ class BattleLogic
 	 *
 	 * @param User $user
 	 *
-	 * @param int $delayTime
-	 *
 	 * @return array
+	 *
 	 */
-	private function validate_battle (Battle $battle, $battle_id, User $user, $delayTime = 0) {
+	private function validate_battle (Battle $battle, $battle_id, User $user) {
 		// Check if their is still a user playing
 		$users_playing = User::where("battle_id", $battle_id)->get();
-		usleep($delayTime);
 		if (count($users_playing) == 0 && Battle::where('id', $battle_id)->firstOrfail()->is_checked_by == NULL) {
 			// Set it so only one user can validate the battle
 			$battle->is_checked_by = $user->id;
@@ -420,6 +470,13 @@ class BattleLogic
 						User::where('id', $winner_id)->firstOrFail()->notify(new BattleWin());
 						debug("The winner of battle " . $battle_id . " is user " . $winner_id);
 					}
+					// Set the pick as a winning in the database
+					foreach ($winner_array[$win_key] as $winner) {
+						$winningPick = Pick::where([['battle_id', $battle_id], ['user_id', $winner]])->firstOrFail();
+						$winningPick->has_won = true;
+						$winningPick->save();
+					}
+
 					// Remove the losers from the playing users table
 					foreach ($winner_array[ $lose_key ] as $loserId) {
 						$user = User::where('id', $loserId)->firstOrFail();

@@ -32,7 +32,7 @@ Route::get('/battle/start', function () {
 });
 Route::get('/battle/picking', function () {
 	$battle = new BattleLogic();
-	$battle->play_battle_debug(0.005, 1);
+	$battle->play_battle_debug(0.02, 1);
 	dump(true);
 	debug("");
 });
@@ -45,6 +45,8 @@ Route::get('/battle/end', function () {
 
 Route::get('/battle/{battle}', "BattleController@getBattle");
 Route::get('/battle/{battle}/{pick}', "BattleController@postBattle");
+
+Route::get('/competition/battle/{battle}', "BattleController@viewCompetitionBattle");
 
 Route::bind('battle', function ($value, $route) {
 	// Id is hashed, so users can't guess the ids of other games, so now we need to decode it

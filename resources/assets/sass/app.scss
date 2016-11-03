@@ -7,3 +7,18 @@
 
 // Bootstrap
 @import "node_modules/bootstrap-sass/assets/stylesheets/bootstrap";
+
+.prev-battle
+{
+  white-space: nowrap;
+  overflow-x: scroll;
+}
+.round
+{
+  display: inline-block;
+}
+
+.pick > .won
+{
+  color: green;
+}

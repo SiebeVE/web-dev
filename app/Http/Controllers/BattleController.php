@@ -36,7 +36,7 @@ class BattleController extends Controller
 			"scissors" => "paper"
 		];
 
-		$pickDB = $battleLogic->play_battle($battle, $pick, NULL, 20000);
+		$pickDB = $battleLogic->play_battle($battle, $pick);
 
 		flashToastr("success", "U heeft " . $pick . " gespeeld.", "Hoera, je hebt gespeeld, binnenkort krijg je de uitslag!");
 
