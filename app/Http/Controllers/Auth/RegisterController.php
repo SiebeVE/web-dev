@@ -64,10 +64,17 @@ class RegisterController extends Controller
      */
     protected function create(array $data)
     {
+	    // Make the first the admin
+	    $is_admin = false;
+	    if(count(User::get()) == 0)
+	    {
+		    $is_admin = true;
+	    }
         return User::create([
             'name' => $data['name'],
             'email' => $data['email'],
             'password' => bcrypt($data['password']),
+	        'is_admin' => $is_admin
         ]);
     }
 
