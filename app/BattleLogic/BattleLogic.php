@@ -10,13 +10,16 @@ namespace App\BattleLogic;
 
 use App\Battle;
 use App\Competition;
+use App\GameSetting;
 use App\Notifications\BattleLoss;
 use App\Notifications\BattleRetake;
 use App\Notifications\BattleStarted;
 use App\Notifications\BattleWin;
 use App\Notifications\CompetitionStarted;
+use App\Notifications\WonCompetition;
 use App\Pick;
 use App\PlayingUser;
+use App\Rank;
 use App\User;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -30,12 +33,18 @@ use Illuminate\Support\Facades\Auth;
 class BattleLogic
 {
 	private $currentPeriodStart, $numberOfPlayers, $lengthOfBattle, $round, $legitPicks, $pickWins;
+	private $gameSettings;
 
 	public function __construct () {
 		// Fetch the current period start date
-		$this->currentPeriodStart = Carbon::now();
-		$this->numberOfPlayers = 2;
-		$this->lengthOfBattle = 24;
+		$this->gameSettings = new GameSetting();
+		$originalPeriodStart = $this->gameSettings->getData("periodStart");
+		$startPeriod = new Carbon($originalPeriodStart);
+		$lengthOfPeriod = $this->gameSettings->getData("lengthOfPeriod");
+		$relativePeriodCounter = floor($startPeriod->diffInMonths(Carbon::now()) / $lengthOfPeriod);
+		$this->currentPeriodStart = $startPeriod->addMonths($lengthOfPeriod * $relativePeriodCounter);
+		$this->numberOfPlayers = $this->gameSettings->getData("numberOfPlayers");
+		$this->lengthOfBattle = $this->gameSettings->getData("lengthOfBattle");
 		$this->round = 1;
 		$this->legitPicks = [
 			"paper",
@@ -47,91 +56,6 @@ class BattleLogic
 			"rock"     => "scissors",
 			"scissors" => "paper"
 		];
-	}
-
-	/**
-	 * Get a random weapon
-	 *
-	 * @return mixed
-	 */
-	private function randomPick () {
-		return $this->legitPicks[ random_int(0, count($this->legitPicks) - 1) ];
-	}
-
-	/**
-	 * Method so all the users play the battle with a percentage in which they fail
-	 *
-	 * @param $failChance
-	 * @param $competitionId
-	 */
-	public function play_battle_debug ($failChance, $competitionId) {
-		ini_set('max_execution_time', 3000);
-		ini_set('memory_limit','-1');
-		// Get all playing users
-		$playingUsers = PlayingUser::where('competition_id', $competitionId)->get();
-
-		$retakeBattles = $this->play_battle_given_users_debug($playingUsers, $failChance);
-
-		while (count($retakeBattles) > 0) {
-			debug("Starting retakes");
-			$userArray = collect([]);
-
-			foreach ($retakeBattles as $retakeBattle) {
-				debug("Add users from retake battle " . $retakeBattle->decodedId() . " to array");
-				$userArray = $userArray->merge($retakeBattle->cur_users());
-			}
-			debug("Play the retakes");
-			$retakeBattles = $this->play_battle_given_users_debug($userArray, $failChance, true);
-		}
-		debug("Finished playing the battles");
-	}
-
-	/**
-	 * Play the battles of the users in the given array
-	 *
-	 * @param $playingUsers
-	 * @param $failChance
-	 *
-	 * @param bool $array_are_users
-	 *
-	 * @return array
-	 */
-	private function play_battle_given_users_debug ($playingUsers, $failChance, $array_are_users = false) {
-		$retakeBattles = [];
-		foreach ($playingUsers as $playingUser) {
-			// Fake so specific users don't participate
-			$has_failed = random_int(0, 100) < $failChance * 100;
-			// Get the id of the battle
-			//dump($playingUser);
-			//dump($playingUser->user);
-			$user = $array_are_users ? $playingUser : $playingUser->user;
-			$battle_id = $user->battle_id;
-			// Generate a random pick
-			$pick = $this->randomPick();
-
-			if ( ! $has_failed) {
-				debug("User " . $user->name . " (" . $user->id . ") picked " . $pick . " for battle " . $battle_id);
-				// Play the battle
-				$battle = Battle::where('id', $battle_id)->firstOrFail();
-				$play_battle = $this->play_battle($battle, $pick, $user);
-				switch ($play_battle[0]) {
-					case 1:
-					case 3:
-					case 4:
-						// Rematch
-						debug("A rematch is requested fot battle " . $battle_id);
-						$retakeBattle = $play_battle[1];
-						debug("Retake id: " . $retakeBattle->decodedId());
-						$retakeBattles[] = $retakeBattle;
-						break;
-				}
-			}
-			else {
-				debug("User " . $user->name . " (" . $user->id . ") failed to pick");
-			}
-		}
-
-		return $retakeBattles;
 	}
 
 
@@ -166,7 +90,10 @@ class BattleLogic
 	 * @param User $user
 	 * @param $competition_id
 	 */
-	public function unsubscribe_competition (User $user, $competition_id) {
+	public function unsubscribe_competition ($competition_id, User $user = NULL) {
+		if ($user == NULL) {
+			$user = Auth::user();
+		}
 		$playing_user = PlayingUser::where(['user_id', $user->id], ['competition_id', $competition_id])->firstOrFail();
 		$playing_user->delete();
 	}
@@ -185,6 +112,15 @@ class BattleLogic
 		// Remove the user from the Playing users database
 		$winningUser->delete();
 		debug("The competition was finished, player " . $winningUser->user->name . " (" . $winningUser->user_id . ") has won.");
+
+		$rank = new Rank();
+		$rank->user_id = $winningUser->user_id;
+		$rank->competition_id = $competition->id;
+		$rank->period_start = $this->currentPeriodStart;
+		$rank->save();
+
+		// Notify the winning user
+		$winningUser->user->notify(new WonCompetition($competition));
 	}
 
 	/**
@@ -200,6 +136,10 @@ class BattleLogic
 
 		$usedUsers = "";
 
+		// Set the battle start date in the competition
+		$competition->battle_start_date = Carbon::now();
+		$competition->save();
+
 		// Check if their is a user single
 		if (count($playingUsers) % $this->numberOfPlayers == 1) {
 			debug("there is a single user, create battle with one extra");
@@ -213,7 +153,7 @@ class BattleLogic
 				$playingUserArray[] = $lastPlayingUser;
 				$playingUsers->pop();
 			}
-			$battle = $this->create_battle($playingUserArray, $this->lengthOfBattle, $this->round, $competition);
+			$battle = $this->create_battle($playingUserArray, $this->round, $competition);
 			debug("Battle " . $battle->decodedId() . " created with players " . $usedUsers);
 			$usedUsers = "";
 		}
@@ -231,7 +171,7 @@ class BattleLogic
 			if (count($playingUserArray) == $this->numberOfPlayers) {
 				// The array is full, the same number as the number of players
 				debug("The array is full, create a new battle");
-				$battle = $this->create_battle($playingUserArray, $this->lengthOfBattle, $this->round, $competition);
+				$battle = $this->create_battle($playingUserArray, $this->round, $competition);
 				debug("Battle " . $battle->decodedId() . " created with players " . $usedUsers);
 				$usedUsers = "";
 				// Empty it out for the next one
@@ -243,13 +183,47 @@ class BattleLogic
 		if (count($playingUserArray) != 0) {
 			// When their are still users which aren't in a battle
 			debug("Create final battle with last users");
-			$battle = $this->create_battle($playingUserArray, $this->lengthOfBattle, $this->round, $competition);
+			$battle = $this->create_battle($playingUserArray, $this->round, $competition);
 			debug("Battle " . $battle->decodedId() . " created with players " . $usedUsers);
 		}
 
 		debug("Finished");
 
 		return true;
+	}
+
+	/**
+	 * Create a battle and set the proper columns for the user
+	 *
+	 * @param $playingUsers
+	 * @param $round
+	 *
+	 * @param Competition $competition
+	 *
+	 * @return Battle
+	 */
+	private function create_battle ($playingUsers, $round, Competition $competition) {
+		// Create the battle
+		$newBattle = Battle::create([
+			"round"          => $round,
+			"competition_id" => $competition->id,
+		]);
+		$newBattle->save();
+
+
+		foreach ($playingUsers as $playingUser) {
+			// Fetch the users for this battle and set the battle id
+			$user = $playingUser->user;
+			$user->battle_id = $newBattle->decodedId();
+			$user->save();
+		}
+
+		foreach ($playingUsers as $playingUser) {
+			// Notify all users
+			$playingUser->user->notify(new BattleStarted($newBattle, $playingUser->user));
+		}
+
+		return $newBattle;
 	}
 
 	/**
@@ -290,100 +264,6 @@ class BattleLogic
 		$validate_battle = $this->validate_battle($battle, $battle_id, $user);
 
 		return $validate_battle;
-	}
-
-	/**
-	 * End the round, so remove the players that haven't played
-	 *
-	 * @param Competition $competition
-	 */
-	public function endRound (Competition $competition) {
-		// Fetch last round of competition
-		$battleComp = $competition->battle()->orderBy('round', 'DESC')->get();
-		$lastBattle = $battleComp->first();
-		$round = $lastBattle->round;
-		$winner_ids = array_pluck($battleComp->where('round', $round)->toArray(), 'winner_id');
-		debug("Last round is " . $round);
-		// Disqualify all users which haven't played
-		$stillPlayingUsers = $competition->playing_users;
-		dump($stillPlayingUsers);
-		debug("Checking for players that hasn't played");
-		foreach ($stillPlayingUsers as $stillPlayingUser) {
-			// Only users that have won will be in the playing users table
-			// But we need to let the persons win that has picked for the battle
-			if ( ! in_array($stillPlayingUser->user->id, $winner_ids) && $stillPlayingUser->user->battle_id != NULL) {
-				debug("Player (" . $stillPlayingUser->user->id . ") " . $stillPlayingUser->user->name . " still hasn't played, so remove him.");
-				$battle_id = $stillPlayingUser->user->battle_id;
-				$stillPlayingUser->user->battle_id = NULL;
-				$stillPlayingUser->user->save();
-				$stillPlayingUser->delete();
-				debug("Now check the battle (" . $battle_id . ")");
-				$this->validate_battle(Battle::where('id', $battle_id)->firstOrFail(), $battle_id, $stillPlayingUser->user);
-			}
-		}
-
-		if (count($stillPlayingUsers) == 1) {
-			// The final battle has been played
-			$this->end_competition($competition, $stillPlayingUsers->first());
-		}
-		else {
-			// The final battle hasn't been played yet
-			$this->round = $round + 1;
-			$this->start_battle($competition);
-		}
-	}
-
-	public function getBattleOutcome(Battle $battle)
-	{
-		debug("Start with battle outcome");
-		// We need to get the first battle of the possible retake
-		$firstBattle = $battle;
-		$battles = [0=>$battle];
-		debug($firstBattle);
-		debug("Battle ".$firstBattle->decodedId()." has retake: ".count($firstBattle->get_retake_of()));
-		$notFirstBattle = count($firstBattle->get_retake_of()) > 0;
-		while($notFirstBattle)
-		{
-			$firstBattle = $firstBattle->get_retake_of()->first();
-			$battles[] = $firstBattle;
-			$notFirstBattle = count($firstBattle->get_retake_of()) > 0;
-		}
-
-		$ranking = [];
-		// Now build the rank from battle one
-		for($battleCount = count($battles)-1; $battleCount >= 0; $battleCount--)
-		{
-			// Get picks of battle
-			$picks = $battles[$battleCount]->picks();
-			$battleRanking = [];
-			foreach ($picks as $pick)
-			{
-				$battleRanking[] = ["user"=>$pick->user->toArray(), "pick" => $pick->toArray(), "win" => false];
-			}
-			$ranking[] = $battleRanking;
-		}
-
-		return $ranking;
-	}
-
-	public function getUserOutcome (User $user = NULL) {
-		if($user == null)
-		{
-			$user = Auth::user();
-		}
-		$battles = $user->battles;
-
-		$ranking = [];
-		foreach ($battles as $battle)
-		{
-			debug("Checking battle ".$battle->decodedId());
-			if($battle->winner_id != NULL) {
-				debug("The battle has a winner, so is the last one");
-				$ranking[] = $this->getBattleOutcome($battle);
-			}
-		}
-
-		return $ranking;
 	}
 
 	/**
@@ -471,7 +351,7 @@ class BattleLogic
 						debug("The winner of battle " . $battle_id . " is user " . $winner_id);
 					}
 					// Set the pick as a winning in the database
-					foreach ($winner_array[$win_key] as $winner) {
+					foreach ($winner_array[ $win_key ] as $winner) {
 						$winningPick = Pick::where([['battle_id', $battle_id], ['user_id', $winner]])->firstOrFail();
 						$winningPick->has_won = true;
 						$winningPick->save();
@@ -513,45 +393,6 @@ class BattleLogic
 	}
 
 	/**
-	 * Create a battle and set the proper columns for the user
-	 *
-	 * @param $playingUsers
-	 * @param $lengthBattleInHours
-	 * @param $round
-	 *
-	 * @param Competition $competition
-	 *
-	 * @return Battle
-	 */
-	private function create_battle ($playingUsers, $lengthBattleInHours, $round, Competition $competition) {
-		// Battle starts right now
-		$start_date = Carbon::now();
-		// Create the battle
-		$newBattle = Battle::create([
-			"start_date"     => $start_date,
-			"end_date"       => $start_date->addHour($lengthBattleInHours),
-			"round"          => $round,
-			"competition_id" => $competition->id,
-		]);
-		$newBattle->save();
-
-
-		foreach ($playingUsers as $playingUser) {
-			// Fetch the users for this battle and set the battle id
-			$user = $playingUser->user;
-			$user->battle_id = $newBattle->decodedId();
-			$user->save();
-		}
-
-		foreach ($playingUsers as $playingUser) {
-			// Notify all users
-			$playingUser->user->notify(new BattleStarted($newBattle, $playingUser->user));
-		}
-
-		return $newBattle;
-	}
-
-	/**
 	 * Reset (make new) the battle when it is a draw
 	 *
 	 * @param $battle
@@ -584,5 +425,213 @@ class BattleLogic
 		}
 
 		return $newBattle;
+	}
+
+	/**
+	 * End the round, so remove the players that haven't played
+	 * Return true for final battle
+	 * Return false for not final battle
+	 *
+	 * @param Competition $competition
+	 *
+	 * @return bool
+	 */
+	public function endRound (Competition $competition) {
+		// Fetch last round of competition
+		$battleComp = $competition->battle()->orderBy('round', 'DESC')->get();
+		$lastBattle = $battleComp->first();
+		$round = $lastBattle->round;
+		$winner_ids = array_pluck($battleComp->where('round', $round)->toArray(), 'winner_id');
+		debug("Last round is " . $round);
+		// Disqualify all users which haven't played
+		$stillPlayingUsers = $competition->playing_users;
+		dump($stillPlayingUsers);
+		debug("Checking for players that hasn't played");
+		$stillRemainingPlayers = count($stillPlayingUsers);
+		foreach ($stillPlayingUsers as $stillPlayingUser) {
+			// Only users that have won will be in the playing users table
+			// But we need to let the persons win that has picked for the battle
+			if ( ! in_array($stillPlayingUser->user->id, $winner_ids) && $stillPlayingUser->user->battle_id != NULL) {
+				debug("Player (" . $stillPlayingUser->user->id . ") " . $stillPlayingUser->user->name . " still hasn't played, so remove him.");
+				$battle_id = $stillPlayingUser->user->battle_id;
+				$stillPlayingUser->user->battle_id = NULL;
+				$stillPlayingUser->user->save();
+				$stillPlayingUser->delete();
+				debug("Now check the battle (" . $battle_id . ")");
+				$this->validate_battle(Battle::where('id', $battle_id)->firstOrFail(), $battle_id, $stillPlayingUser->user);
+				$stillRemainingPlayers --;
+			}
+		}
+
+		if ($stillRemainingPlayers == 1) {
+			// The final battle has been played
+			$this->end_competition($competition, $stillPlayingUsers->first());
+
+			return true;
+		}
+		else {
+			// The final battle hasn't been played yet
+			$this->round = $round + 1;
+			$this->start_battle($competition);
+
+			return false;
+		}
+	}
+
+	/**
+	 * Get the ranking and outcome of a given battle
+	 * The ranking is given including retakes
+	 *
+	 * @param Battle $battle
+	 *
+	 * @return array
+	 */
+	public function getBattleOutcome (Battle $battle) {
+		debug("Start with battle outcome");
+		// We need to get the first battle of the possible retake
+		$firstBattle = $battle;
+		$battles = [0 => $battle];
+		debug($firstBattle);
+		debug("Battle " . $firstBattle->decodedId() . " has retake: " . count($firstBattle->get_retake_of()));
+		$notFirstBattle = count($firstBattle->get_retake_of()) > 0;
+		while ($notFirstBattle) {
+			$firstBattle = $firstBattle->get_retake_of()->first();
+			$battles[] = $firstBattle;
+			$notFirstBattle = count($firstBattle->get_retake_of()) > 0;
+		}
+
+		$ranking = [];
+		// Now build the rank from battle one
+		for ($battleCount = count($battles) - 1; $battleCount >= 0; $battleCount --) {
+			// Get picks of battle
+			$picks = $battles[ $battleCount ]->picks();
+			$battleRanking = [];
+			//dump($battles[ $battleCount ]);
+			foreach ($picks as $pick) {
+				$battleRanking[] = ["user" => $pick->user->toArray(), "pick" => $pick->toArray(), "win" => false];
+			}
+			$ranking[] = $battleRanking;
+		}
+
+		return $ranking;
+	}
+
+	/**
+	 * Get the ranking and outcomes of given user
+	 *
+	 * @param User|NULL $user
+	 *
+	 * @return array
+	 */
+	public function getUserOutcome (User $user = NULL) {
+		if ($user == NULL) {
+			$user = Auth::user();
+		}
+		$battles = $user->battles;
+
+		$ranking = [];
+		$previousCompetitionId = 0;
+		$keyComp = - 1;
+		foreach ($battles as $battle) {
+			if ($battle->competition_id != $previousCompetitionId) {
+				$previousCompetitionId = $battle->competition_id;
+				$keyComp ++;
+			}
+			debug("Checking battle " . $battle->decodedId());
+			if ($battle->winner_id != NULL) {
+				debug("The battle has a winner, so is the last one");
+				$ranking[ $keyComp ][] = $this->getBattleOutcome($battle);
+			}
+		}
+
+		//dd($ranking);
+
+		return $ranking;
+	}
+
+	/* ===========================================DEBUG METHODS=========================================== */
+	/**
+	 * Get a random weapon
+	 *
+	 * @return mixed
+	 */
+	private function randomPick () {
+		return $this->legitPicks[ random_int(0, count($this->legitPicks) - 1) ];
+	}
+
+	/**
+	 * Method so all the users play the battle with a percentage in which they fail
+	 *
+	 * @param $failChance
+	 * @param $competitionId
+	 */
+	public function play_battle_debug ($failChance, $competitionId) {
+		ini_set('max_execution_time', 3000);
+		ini_set('memory_limit', '-1');
+		// Get all playing users
+		$playingUsers = PlayingUser::where('competition_id', $competitionId)->get();
+
+		$retakeBattles = $this->play_battle_given_users_debug($playingUsers, $failChance);
+
+		while (count($retakeBattles) > 0) {
+			debug("Starting retakes");
+			$userArray = collect([]);
+
+			foreach ($retakeBattles as $retakeBattle) {
+				debug("Add users from retake battle " . $retakeBattle->decodedId() . " to array");
+				$userArray = $userArray->merge($retakeBattle->cur_users());
+			}
+			debug("Play the retakes");
+			$retakeBattles = $this->play_battle_given_users_debug($userArray, $failChance, true);
+		}
+		debug("Finished playing the battles");
+	}
+
+	/**
+	 * Play the battles of the users in the given array
+	 *
+	 * @param $playingUsers
+	 * @param $failChance
+	 *
+	 * @param bool $array_are_users
+	 *
+	 * @return array
+	 */
+	private function play_battle_given_users_debug ($playingUsers, $failChance, $array_are_users = false) {
+		$retakeBattles = [];
+		foreach ($playingUsers as $playingUser) {
+			// Fake so specific users don't participate
+			$has_failed = random_int(0, 100) < $failChance * 100;
+			// Get the id of the battle
+			//dump($playingUser);
+			//dump($playingUser->user);
+			$user = $array_are_users ? $playingUser : $playingUser->user;
+			$battle_id = $user->battle_id;
+			// Generate a random pick
+			$pick = $this->randomPick();
+
+			if ( ! $has_failed) {
+				debug("User " . $user->name . " (" . $user->id . ") picked " . $pick . " for battle " . $battle_id);
+				// Play the battle
+				$battle = Battle::where('id', $battle_id)->firstOrFail();
+				$play_battle = $this->play_battle($battle, $pick, $user);
+				switch ($play_battle[0]) {
+					case 1:
+					case 3:
+					case 4:
+						// Rematch
+						debug("A rematch is requested fot battle " . $battle_id);
+						$retakeBattle = $play_battle[1];
+						debug("Retake id: " . $retakeBattle->decodedId());
+						$retakeBattles[] = $retakeBattle;
+						break;
+				}
+			}
+			else {
+				debug("User " . $user->name . " (" . $user->id . ") failed to pick");
+			}
+		}
+
+		return $retakeBattles;
 	}
 }

@@ -16,6 +16,7 @@ class Rank extends Model
 	 */
 	protected $dates = [
 		'deleted_at',
+		'period_start'
 	];
 
 	/**

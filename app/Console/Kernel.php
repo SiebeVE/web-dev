@@ -13,7 +13,11 @@ class Kernel extends ConsoleKernel
      * @var array
      */
     protected $commands = [
-        //
+        Commands\StartCompetition::class,
+        Commands\EndBattle::class,
+        Commands\StartBattle::class,
+        Commands\CheckCompetition::class,
+        Commands\CheckBattleEnd::class,
     ];
 
     /**
@@ -24,8 +28,7 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule)
     {
-        // $schedule->command('inspire')
-        //          ->hourly();
+	    //$schedule->command('check:competition')->everyMinute();
     }
 
     /**

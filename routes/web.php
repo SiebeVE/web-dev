@@ -24,9 +24,9 @@ Route::get('/register/confirm/{token}', 'Auth\RegisterController@confirmEmail');
 
 Route::get('/battle/start', function () {
 	\Illuminate\Support\Facades\Artisan::call('migrate:refresh', ['--seed' => true,]);
-	$battle = new BattleLogic();
-	$competition = $battle->start_competition();
-	$battle->start_battle($competition);
+	//$battle = new BattleLogic();
+	//$competition = $battle->start_competition();
+	//$battle->start_battle($competition);
 	dump(true);
 	debug("");
 });
@@ -47,6 +47,7 @@ Route::get('/battle/{battle}', "BattleController@getBattle");
 Route::get('/battle/{battle}/{pick}', "BattleController@postBattle");
 
 Route::get('/competition/battle/{battle}', "BattleController@viewCompetitionBattle");
+Route::get('/competition/cancel/{competitionId}', "BattleController@cancelCompetition");
 
 Route::bind('battle', function ($value, $route) {
 	// Id is hashed, so users can't guess the ids of other games, so now we need to decode it

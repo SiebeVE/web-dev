@@ -17,7 +17,8 @@ class Competition extends Model
 	protected $dates = [
 		'deleted_at',
 		'start_date',
-		'period_start'
+		'period_start',
+		'battle_start_date'
 	];
 
 	/**

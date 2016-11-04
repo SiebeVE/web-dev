@@ -18,8 +18,6 @@ class Battle extends Model
 	 */
 	protected $dates = [
 		'deleted_at',
-		'start_date',
-		'end_date',
 	];
 
 	/**
@@ -28,8 +26,6 @@ class Battle extends Model
 	 * @var array
 	 */
 	protected $fillable = [
-		"start_date",
-		"end_date",
 		"round",
 		"competition_id"
 	];

@@ -36,13 +36,18 @@
 				<div class="panel panel-default">
 					<div class="panel-heading">Uw vorige gevechten</div>
 					<div class="panel-body prev-battle">
-						@foreach($previousBattle as $round)
-							<div class="round">
-								@foreach($round as $battle)
-									<div class="battle">
-										@foreach($battle as $pick)
-											<div class="pick">
-												<p class="{{ $pick["pick"]["has_won"] ? "won" : "" }}">{{ $pick["user"]["name"] }} <i class="fa fa-hand-{{$pick["pick"]["pick"]}}-o"></i></p>
+						@foreach($previousBattle as $competition)
+							<div class="competition">
+								@foreach($competition as $round)
+									<div class="round">
+										@foreach($round as $battle)
+											<div class="battle">
+												@foreach($battle as $pick)
+													<div class="pick">
+														<p class="{{ $pick["pick"]["has_won"] ? "won" : "" }}">{{ $pick["user"]["name"] }}
+															<i class="fa fa-hand-{{$pick["pick"]["pick"]}}-o"></i></p>
+													</div>
+												@endforeach
 											</div>
 										@endforeach
 									</div>
