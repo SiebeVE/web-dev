@@ -30,6 +30,14 @@ Route::get('/battle/start', function () {
 	dump(true);
 	debug("");
 });
+Route::get('/battle/end', function () {
+	\Illuminate\Support\Facades\Artisan::call('check:competition');
+	//$battle = new BattleLogic();
+	//$competition = $battle->start_competition();
+	//$battle->start_battle($competition);
+	dump(true);
+	debug("");
+});
 Route::get('/battle/picking', function () {
 	$battle = new BattleLogic();
 	$battle->play_battle_debug(0.02, 1);

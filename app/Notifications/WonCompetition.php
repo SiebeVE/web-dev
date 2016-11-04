@@ -19,7 +19,7 @@ class WonCompetition extends Notification
 	 *
 	 * @param Competition $competition
 	 */
-    public function __construct(Competition $competition)
+    public function __construct($competition)
     {
         $this->competition = $competition;
     }

@@ -120,7 +120,7 @@ class BattleLogic
 		$rank->save();
 
 		// Notify the winning user
-		$winningUser->user->notify(new WonCompetition($competition));
+		$winningUser->user->notify(new WonCompetition($competition->id));
 	}
 
 	/**
