@@ -12,6 +12,7 @@ use App\Battle;
 use App\Competition;
 use App\GameSetting;
 use App\Notifications\BattleLoss;
+use App\Notifications\BattlePlay;
 use App\Notifications\BattleRetake;
 use App\Notifications\BattleStarted;
 use App\Notifications\BattleWin;
@@ -94,8 +95,13 @@ class BattleLogic
 		if ($user == NULL) {
 			$user = Auth::user();
 		}
-		$playing_user = PlayingUser::where(['user_id', $user->id], ['competition_id', $competition_id])->firstOrFail();
+		$playing_user = PlayingUser::where([
+			['user_id', $user->id],
+			['competition_id', $competition_id]
+		])->firstOrFail();
 		$playing_user->delete();
+		$user->battle_id = NULL;
+		$user->save();
 	}
 
 	/**
@@ -104,23 +110,29 @@ class BattleLogic
 	 * @param Competition $competition
 	 * @param PlayingUser $winningUser
 	 */
-	public function end_competition (Competition $competition, PlayingUser $winningUser) {
-		// Set the competitions winner id
-		$competition->winner_id = $winningUser->user_id;
+	public function end_competition (Competition $competition, PlayingUser $winningUser = NULL) {
+		$competition->has_finished = true;
 		$competition->save();
+		if ($winningUser != NULL) {
+			// Set the competitions winner id
+			$competition->winner_id = $winningUser->user_id;
+			$competition->save();
 
-		// Remove the user from the Playing users database
-		$winningUser->delete();
-		debug("The competition was finished, player " . $winningUser->user->name . " (" . $winningUser->user_id . ") has won.");
+			// Remove the user from the Playing users database
+			$winningUser->delete();
+			debug("The competition was finished, player " . $winningUser->user->name . " (" . $winningUser->user_id . ") has won.");
 
-		$rank = new Rank();
-		$rank->user_id = $winningUser->user_id;
-		$rank->competition_id = $competition->id;
-		$rank->period_start = $this->currentPeriodStart;
-		$rank->save();
+			$rank = new Rank();
+			$rank->user_id = $winningUser->user_id;
+			$rank->competition_id = $competition->id;
+			$rank->period_start = $this->currentPeriodStart;
+			$rank->save();
 
-		// Notify the winning user
-		$winningUser->user->notify(new WonCompetition($competition->id));
+			$notification = new WonCompetition($competition->id);
+			dump($notification);
+			// Notify the winning user
+			$winningUser->user->notify($notification);
+		}
 	}
 
 	/**
@@ -263,6 +275,8 @@ class BattleLogic
 
 		$validate_battle = $this->validate_battle($battle, $battle_id, $user);
 
+		$user->notify(new BattlePlay($battle, $pick));
+
 		return $validate_battle;
 	}
 
@@ -316,7 +330,7 @@ class BattleLogic
 						$winner_id = $winner_array[ $lonelyKey ][0];
 						debug("The winner of battle " . $battle_id . " is " . $winner_id);
 						// Notify the user it has won
-						User::where('id', $winner_id)->firstOrFail()->notify(new BattleWin());
+						User::where('id', $winner_id)->firstOrFail()->notify(new BattleWin($battle_id));
 					}
 					else {
 						debug("Players of battle " . $battle_id . " picked all the same, reset!");
@@ -340,14 +354,14 @@ class BattleLogic
 					if (count($winner_array[ $win_key ]) > 1) {
 						// More then one winner, play again with remaining players
 						debug("The battle " . $battle_id . " is not yet determined (multiple winners), a rematch is required.");
-						$newBattle = $this->resetBattle($battle, $picks, $battle_id, true);
+						$newBattle = $this->resetBattle($battle, $picks, $battle_id, true, true);
 						$multiple_winner = true;
 					}
 					else {
 						// One winner
 						$winner_id = $winner_array[ $win_key ][0];
 						// Notify the user it has won
-						User::where('id', $winner_id)->firstOrFail()->notify(new BattleWin());
+						User::where('id', $winner_id)->firstOrFail()->notify(new BattleWin($battle->id));
 						debug("The winner of battle " . $battle_id . " is user " . $winner_id);
 					}
 					// Set the pick as a winning in the database
@@ -401,9 +415,11 @@ class BattleLogic
 	 *
 	 * @param bool $sendNotification
 	 *
+	 * @param bool $is_winner
+	 *
 	 * @return mixed
 	 */
-	private function resetBattle ($battle, $picks, $battle_id, $sendNotification = false) {
+	private function resetBattle ($battle, $picks, $battle_id, $sendNotification = false, $is_winner = false) {
 		// Make copy of battle
 		$newBattle = $battle->replicate();
 
@@ -420,7 +436,12 @@ class BattleLogic
 			$user->save();
 			// Notify the users of the retake
 			if ($sendNotification) {
-				$user->notify(new BattleRetake($newBattle));
+				if ($is_winner) {
+					$user->notify(new BattleWin($battle_id, $newBattle->decodedId()));
+				}
+				else {
+					$user->notify(new BattleRetake($newBattle));
+				}
 			}
 		}
 
@@ -463,9 +484,13 @@ class BattleLogic
 			}
 		}
 
-		if ($stillRemainingPlayers == 1) {
+		if ($stillRemainingPlayers <= 1) {
 			// The final battle has been played
-			$this->end_competition($competition, $stillPlayingUsers->first());
+			$winner = NULL;
+			if ($stillRemainingPlayers == 1) {
+				$winner = PlayingUser::where('competition_id', $competition->id)->firstOrFail();
+			}
+			$this->end_competition($competition, $winner);
 
 			return true;
 		}
@@ -528,6 +553,26 @@ class BattleLogic
 			$user = Auth::user();
 		}
 		$battles = $user->battles;
+		$battlesWithRelations = $battles;
+		foreach ($battles as $battle) {
+			$startBattle = $battle;
+			while (count($startBattle->with_retake()) > 0) {
+				$startBattle = $startBattle->with_retake()->last();
+				$battlesWithRelations->push($startBattle);
+			}
+		}
+		//dump($battlesWithRelations);
+		$uniqueBattles = collect([]);
+		$battle_ids = [];
+		//dump($uniqueBattles);
+		foreach ($battlesWithRelations as $battle) {
+			if ( ! in_array($battle->id, $battle_ids)) {
+				$battle_ids[] = $battle->id;
+				$uniqueBattles->push($battle);
+			}
+		}
+		$battles = $uniqueBattles;
+		//dump($uniqueBattles);
 
 		$ranking = [];
 		$previousCompetitionId = 0;

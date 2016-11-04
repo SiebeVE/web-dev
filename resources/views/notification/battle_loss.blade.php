@@ -1,1 +1,1 @@
-<li>Helaas je hebt verloren.</li>
+<li>Helaas je hebt verloren. <a href="{{url('/competition/battle', $notification->data["lostBattle"]["id"]) }}">Klik hier om het gevecht opnieuw te bekijken</a>.</li>

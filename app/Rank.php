@@ -24,7 +24,7 @@ class Rank extends Model
 	 *
 	 * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
 	 */
-	public function users () {
+	public function user () {
 		return $this->belongsTo('\App\User');
 	}
 
@@ -33,7 +33,7 @@ class Rank extends Model
 	 *
 	 * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
 	 */
-	public function competitions () {
+	public function competition () {
 		return $this->belongsTo('\App\Competition');
 	}
 }

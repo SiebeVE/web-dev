@@ -13,13 +13,13 @@
 
 use App\BattleLogic\BattleLogic;
 
-Route::get('/', function () {
-	return view('welcome');
-});
+Route::get('/', 'HomeController@welcome');
 
 Auth::routes();
 
 Route::get('/home', 'HomeController@index');
+Route::post('/home', 'HomeController@postAdmin');
+
 Route::get('/register/confirm/{token}', 'Auth\RegisterController@confirmEmail');
 
 Route::get('/battle/start', function () {
@@ -30,7 +30,7 @@ Route::get('/battle/start', function () {
 	dump(true);
 	debug("");
 });
-Route::get('/battle/end', function () {
+Route::get('/battle/finish', function () {
 	\Illuminate\Support\Facades\Artisan::call('check:competition');
 	//$battle = new BattleLogic();
 	//$competition = $battle->start_competition();
@@ -51,6 +51,8 @@ Route::get('/battle/end', function () {
 	debug("");
 });
 
+Route::get('/rank', "BattleController@getRank");
+
 Route::get('/battle/{battle}', "BattleController@getBattle");
 Route::get('/battle/{battle}/{pick}', "BattleController@postBattle");
 
@@ -60,4 +62,9 @@ Route::get('/competition/cancel/{competitionId}', "BattleController@cancelCompet
 Route::bind('battle', function ($value, $route) {
 	// Id is hashed, so users can't guess the ids of other games, so now we need to decode it
 	return \App\Battle::where('id', decodeHash($value)[0])->firstOrFail();
+});
+
+Route::bind('competitionId', function ($value, $route) {
+	// Id is hashed, so users can't guess the ids of other games, so now we need to decode it
+	return decodeHash($value, "comp")[0];
 });

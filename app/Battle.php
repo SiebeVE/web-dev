@@ -39,10 +39,7 @@ class Battle extends Model
 	 */
 	public function getIdAttribute ($id) {
 		// When we fetch the id, we want it hashed, so the user can't guess the next game and fuck my game
-		$hashedId = new Hashids(env("HASH_SECRET", "MySecretKey"), 15);
-		$hashedId = $hashedId->encode($id);
-
-		return $hashedId;
+		return hashId($id);
 	}
 
 	/**

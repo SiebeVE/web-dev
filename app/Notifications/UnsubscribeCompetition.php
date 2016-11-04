@@ -2,28 +2,23 @@
 
 namespace App\Notifications;
 
-use App\Battle;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 
-class BattleWin extends Notification
+class UnsubscribeCompetition extends Notification
 {
     use Queueable;
-	private $battleWin;
-	private $battleRetake;
 
-	/**
-	 * Create a new notification instance.
-	 *
-	 * @param $battleId
-	 * @param $battleRetake
-	 */
-    public function __construct($battleId, $battleRetake = NULL)
+    /**
+     * Create a new notification instance.
+     *
+     * @return void
+     */
+    public function __construct()
     {
-	    $this->battleWin = $battleId;
-        $this->battleRetake = $battleRetake;
+        //
     }
 
     /**
@@ -60,8 +55,7 @@ class BattleWin extends Notification
     public function toArray($notifiable)
     {
         return [
-            "battleId" => $this->battleWin,
-            "retake" => $this->battleRetake
+            //
         ];
     }
 }

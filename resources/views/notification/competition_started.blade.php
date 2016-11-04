@@ -1,1 +1,1 @@
-<li>Er is een nieuwe competitie gestart. Je bent automatisch ingeschreven.</li>
+<li>Er is een nieuwe competitie gestart. Je bent automatisch ingeschreven, <a href="{{ url('/competition/cancel',hashId($notification->data["competition_start"]["id"], "comp")) }}">Klik hier om uit te schrijven.</a></li>

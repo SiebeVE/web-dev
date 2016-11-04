@@ -72,23 +72,25 @@
                         <a href="{{ url('/home') }}">Home</a>
                     @else
                         <a href="{{ url('/login') }}">Login</a>
-                        <a href="{{ url('/register') }}">Register</a>
+                        <a href="{{ url('/register') }}">Registreer</a>
                     @endif
                 </div>
             @endif
 
             <div class="content">
+                <div>
+                    <p>Neem deel aan de grootste schaar-steen-papier competitie ter wereld!</p>
+                    <p>Je hebt 24 uur de tijd om een gevecht (een heuse schaar-steen-papier) te volbrengen tegen een random gekozen speler!</p>
+                    <p>Na het inschrijven moet je wachten tot er een nieuwe competitie is gestart. Deze start van zodra de vorige competitie is volbracht en je wordt automatisch ingeschreven!</p>
+                </div>
                 <div class="title m-b-md">
-                    Laravel
+                    <a href="{{ url('/home') }}">Neem nu deel!</a>
                 </div>
-
-                <div class="links">
-                    <a href="https://laravel.com/docs">Documentation</a>
-                    <a href="https://laracasts.com">Laracasts</a>
-                    <a href="https://laravel-news.com">News</a>
-                    <a href="https://forge.laravel.com">Forge</a>
-                    <a href="https://github.com/laravel/laravel">GitHub</a>
-                </div>
+                <marquee scrollamount="2" direction="up" loop="true" width="100%" height="24px"><center>
+                        @foreach($competitions as $competition)
+                            Competitie {{$competition->id}} is gewonnen door {{ $competition->winner != null ? $competition->winner->name : "Geen winnaar"}}<br>
+                            @endforeach
+                    </center></marquee>
             </div>
         </div>
     </body>

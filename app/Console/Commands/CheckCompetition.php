@@ -58,13 +58,16 @@ class CheckCompetition extends Command
 
 			// Check if the battle round has ended and the competition doesn't have winner yet
 			$debugRound = $gameSettings->getData('endRoundForCompetition') == $competition->id && env('APP_DEBUG', false);
-			$hasRoundEnd = $competition->battle_start_date != NULL && floor($competition->battle_start_date->diffInHours($timeNowCarbon)) >= intval($gameSettings->getData('lengthOfBattle')) && $competition->winner_id == NULL;
+			$hasRoundEnd = $competition->battle_start_date != NULL && floor($competition->battle_start_date->diffInHours($timeNowCarbon)) >= intval($gameSettings->getData('lengthOfBattle')) && !$competition->has_finished;
 			$this->info("The debug for the round is " . ($debugRound ? "true" : "false"));
+			debug("DEBUG CONSOLE: The debug for the round is " . ($debugRound ? "true" : "false"));
 			$this->info("The normal for the round is " . ($hasRoundEnd ? "true" : "false"));
+			debug("DEBUG CONSOLE: The normal for the round is " . ($hasRoundEnd ? "true" : "false"));
 			if ($hasRoundEnd || ($debugRound)) {
 				// End the round
 				$result = $battleLogic->endRound($competition);
 				$this->info("The result of the end round is " . ($result ? "true" : "false"));
+				debug("DEBUG CONSOLE: The result of the end round is " . ($result ? "true" : "false"));
 				if ($result) {
 					// If the final round has been played, start a new competition
 					$battleLogic->start_competition();
@@ -78,7 +81,9 @@ class CheckCompetition extends Command
 			$debugSubscribe = $gameSettings->getData('endSubscribeForCompetition') == $competition->id && env('APP_DEBUG', false);
 			$hasSubscribeEnd = floor($competition->start_date->diffInDays($timeNowCarbon)) >= intval($gameSettings->getData('lengthOfUnsubscribePeriod')) && $competition->battle_start_date == NULL;
 			$this->info("The debug for the subscribe period is " . ($debugRound ? "true" : "false"));
+			debug("DEBUG CONSOLE: The debug for the subscribe period is " . ($debugRound ? "true" : "false"));
 			$this->info("The normal for the subscribe period is " . ($hasSubscribeEnd ? "true" : "false"));
+			debug("DEBUG CONSOLE: The normal for the subscribe period is " . ($hasSubscribeEnd ? "true" : "false"));
 			if ($hasSubscribeEnd || ($debugSubscribe)) {
 				// Start the competition
 				$battleLogic->start_battle($competition);

@@ -1,1 +1,1 @@
-<li>Het gevecht is nog niet beslist. Speel opnieuw</li>
+<li>Het gevecht is nog niet beslist. <a href="{{ url('/battle', $notification->data["retake"]["id"]) }}">Speel opnieuw</a></li>
