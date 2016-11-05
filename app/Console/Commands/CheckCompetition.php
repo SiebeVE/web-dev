@@ -52,7 +52,7 @@ class CheckCompetition extends Command
 
 		foreach ($competitions as $competition) {
 			$timeNowCarbon = Carbon::now();
-			$timeNowCarbon = Carbon::now()->addDays(7); // End subscription
+			//$timeNowCarbon = Carbon::now()->addDays(7); // End subscription
 			//$timeNowCarbon = Carbon::now()->addHours(24); // End round
 			//$timeNowCarbon = Carbon::now()->addMonths(4); // End period
 
