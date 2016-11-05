@@ -22,6 +22,7 @@ Route::post('/home', 'HomeController@postAdmin');
 
 Route::get('/register/confirm/{token}', 'Auth\RegisterController@confirmEmail');
 
+/*
 Route::get('/battle/start', function () {
 	\Illuminate\Support\Facades\Artisan::call('migrate:refresh', ['--seed' => true,]);
 	//$battle = new BattleLogic();
@@ -49,7 +50,7 @@ Route::get('/battle/end', function () {
 	$battle->endRound(\App\Competition::firstOrFail());
 	dump(true);
 	debug("");
-});
+});*/
 
 Route::get('/rank', "BattleController@getRank");
 
